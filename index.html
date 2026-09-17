@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Pelaporan Mesra Ibadah HPP</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        .spinner {
+            border: 4px solid rgba(16, 185, 129, 0.2);
+            width: 48px; height: 48px; border-radius: 50%;
+            border-left-color: #10B981; animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .fade-in { animation: fadeIn 0.6s ease-out forwards; }
+        @keyframes fadeIn { 
+            0% { opacity: 0; transform: translateY(15px); } 
+            100% { opacity: 1; transform: translateY(0); } 
+        }
+        .data-refresh { animation: dataRefresh 0.5s ease-out forwards; }
+        @keyframes dataRefresh {
+            0% { opacity: 0.3; transform: scale(0.98); filter: brightness(1.1); }
+            100% { opacity: 1; transform: scale(1); filter: brightness(1); }
+        }
+        .custom-scrollbar::-webkit-scrollbar { height: 8px; width: 8px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .glass-nav { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); }
+    </style>
+
+<style id="premium-dashboard-overrides">
+:root{--premium-bg:#f4f7f7;--premium-ink:#102a2a;--premium-line:rgba(15,118,110,.10)}
+body{background:radial-gradient(circle at 10% -10%,rgba(20,184,166,.12),transparent 32%),radial-gradient(circle at 100% 0%,rgba(15,118,110,.08),transparent 28%),var(--premium-bg);color:var(--premium-ink)}
+nav.glass-nav{background:rgba(255,255,255,.78)!important;border-bottom:1px solid rgba(15,118,110,.12)!important;box-shadow:0 10px 30px rgba(15,23,42,.05)!important}
+nav .bg-gradient-to-br{background:linear-gradient(135deg,#0f766e,#14b8a6)!important;box-shadow:0 10px 24px rgba(15,118,110,.25)!important}
+#dashboardContent>div,#kpiSection>div,#tableSection{border-color:var(--premium-line)!important;box-shadow:0 18px 45px rgba(15,23,42,.055)!important}
+#dashboardContent>div:first-of-type:before{content:"";position:absolute;right:0;top:0;width:240px;height:240px;background:radial-gradient(circle,rgba(20,184,166,.12),transparent 68%);pointer-events:none}
+#monthHeaderSection{background:linear-gradient(135deg,#0b5f59,#0f766e 52%,#14b8a6)!important;box-shadow:0 18px 40px rgba(15,118,110,.20)!important;border:1px solid rgba(255,255,255,.14)!important;position:relative;overflow:hidden}
+#monthHeaderSection:after{content:"";position:absolute;width:180px;height:180px;right:90px;top:-80px;border:1px solid rgba(255,255,255,.12);border-radius:999px;box-shadow:0 0 0 28px rgba(255,255,255,.035),0 0 0 58px rgba(255,255,255,.025);pointer-events:none}
+#kpiSection>div:first-child>div{background:linear-gradient(145deg,#fff,#f8fbfb)!important;transition:transform .25s ease,box-shadow .25s ease}
+#kpiSection>div:first-child>div:hover{transform:translateY(-3px);box-shadow:0 20px 40px rgba(15,23,42,.08)!important}
+#kpiSection>div.lg\:col-span-2{background:linear-gradient(145deg,#fff,#fbfdfd)!important}
+#tableSection{overflow:hidden}
+#tableSection>div:first-child{background:linear-gradient(90deg,#f8fbfb,#fff)!important}
+#tableSection thead tr{background:#f8fbfb!important}
+#tableSection tbody tr{transition:background .18s ease}
+#tableSection tbody tr:hover{background:rgba(20,184,166,.045)!important}
+#monthTabsContainer button{box-shadow:0 2px 8px rgba(15,23,42,.035)}
+#monthTabsContainer button:hover:not(:disabled){transform:translateY(-1px)}
+#monthTabsContainer button.border-emerald-500{box-shadow:0 8px 18px rgba(16,185,129,.20)!important}
+#dataSourceBadge{backdrop-filter:blur(8px)}
+.spinner{border-left-color:#0f766e!important}
+@media(max-width:640px){main{padding-top:1rem!important}#monthHeaderSection{padding:1.25rem!important}#monthHeaderSection h2{font-size:1.55rem!important}#kpiPercentage,#kpiCompleted{font-size:2.7rem!important}}
+</style>
+
+</head>
+<body class="text-gray-800 antialiased selection:bg-emerald-200 selection:text-emerald-900">
+
+    <nav class="glass-nav shadow-sm border-b border-gray-200 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center gap-3">
+                    <div class="flex-shrink-0 flex items-center justify-center bg-gradient-to-br from-emerald-600 to-teal-600 text-white w-11 h-11 rounded-xl shadow-lg shadow-emerald-500/30">
+                        <i class="fas fa-hand-holding-heart text-xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-lg text-gray-900 leading-tight tracking-tight">Pelaporan HMI</h1>
+                        <p class="text-[11px] text-emerald-600 font-bold tracking-widest uppercase" id="navHospitalName">MEMUATKAN...</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-4">
+                    <div id="dataSourceBadge" class="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border"></div>
+                    <div class="text-right hidden sm:block">
+                        <p class="text-xs font-bold text-gray-500 uppercase tracking-wide">Tahun Semasa</p>
+                        <p class="text-sm font-black text-gray-800" id="navTahun">2026</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        <!-- Loading Overlay -->
+        <div id="loadingOverlay" class="fixed inset-0 bg-slate-50/90 z-40 flex flex-col items-center justify-center backdrop-blur-sm transition-opacity duration-300">
+            <div class="spinner mb-5 shadow-lg shadow-emerald-500/20"></div>
+            <h3 class="text-xl font-bold text-gray-800 mb-1">Menyemak Data Semasa...</h3>
+            <p class="text-emerald-600 font-medium animate-pulse text-sm">Menyambung ke Google Sheets</p>
+        </div>
+
+        <div id="dashboardContent" class="hidden opacity-0 space-y-6">
+            
+            <!-- MAKLUMAT WAD & PEMILIHAN BULAN (TABS) -->
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col gap-4 relative overflow-hidden">
+                <div class="absolute right-0 top-0 w-32 h-32 bg-emerald-50 rounded-bl-full -z-10 opacity-60"></div>
+                
+                <div class="flex items-center gap-4">
+                    <div class="w-14 h-14 rounded-2xl bg-teal-50 flex items-center justify-center text-teal-600 shadow-inner">
+                        <i class="fas fa-bed text-2xl"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-2xl font-black text-gray-900 tracking-tight flex items-center gap-2">
+                            WAD: <span id="metaWad" class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-teal-500">C14</span>
+                        </h2>
+                        <p class="text-sm text-gray-500 mt-1 flex items-center gap-2 font-medium">
+                            <span class="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center"><i class="fas fa-user-nurse text-xs text-gray-500"></i></span>
+                            Pegawai: <span id="metaPegawai" class="text-gray-800 font-bold">AMIROH BINTI KAMARDIN</span>
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="mt-4 border-t border-gray-100 pt-4">
+                    <p class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Sila Pilih Bulan Untuk Dilihat:</p>
+                    <div class="flex overflow-x-auto custom-scrollbar pb-2 gap-2" id="monthTabsContainer">
+                        <!-- Butang tab bulan dijana oleh JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAJUK BESAR BULAN DIPILIH -->
+            <div class="bg-emerald-600 rounded-2xl p-6 text-white shadow-md flex items-center justify-between" id="monthHeaderSection">
+                <div>
+                    <p class="text-emerald-100 text-sm font-semibold uppercase tracking-wider mb-1">Laporan Bulanan Terperinci</p>
+                    <h2 class="text-3xl font-black" id="bigMonthTitle">BULAN: JANUARI</h2>
+                </div>
+                <div class="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
+                    <i class="far fa-calendar-check text-3xl text-white"></i>
+                </div>
+            </div>
+
+            <!-- KPI & CARTA -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6" id="kpiSection">
+                
+                <div class="lg:col-span-1 grid grid-cols-1 gap-5">
+                    <!-- KPI 1: Peratusan -->
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 relative overflow-hidden">
+                        <div class="flex justify-between items-start mb-4">
+                            <p class="text-sm font-semibold text-gray-500">Pencapaian Fasiliti</p>
+                            <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center"><i class="fas fa-percentage text-lg"></i></div>
+                        </div>
+                        <div class="flex items-baseline gap-2 relative z-10">
+                            <h3 class="text-5xl font-black text-gray-900 tracking-tighter" id="kpiPercentage">0%</h3>
+                            <span class="text-xs font-bold px-2 py-1 rounded-md" id="kpiStatusBadge">---</span>
+                        </div>
+                    </div>
+
+                    <!-- KPI 2: Kemudahan Lengkap -->
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 relative overflow-hidden">
+                        <div class="flex justify-between items-start mb-4">
+                            <p class="text-sm font-semibold text-gray-500">Kemudahan Lengkap (√)</p>
+                            <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center"><i class="fas fa-clipboard-check text-lg"></i></div>
+                        </div>
+                        <div class="flex items-baseline gap-2 relative z-10">
+                            <h3 class="text-5xl font-black text-gray-900 tracking-tighter" id="kpiCompleted">0</h3>
+                            <span class="text-lg font-bold text-gray-400">/ 10</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CARTA PALANG FOKUS BULANAN -->
+                <div class="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-center">
+                    <h4 id="pieChartTitle" class="font-bold text-gray-900 mb-4 text-center text-sm">Prestasi Pencapaian Sehingga Bulan Semasa</h4>
+                    <div class="w-full h-56 relative">
+                        <canvas id="doughnutChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- JADUAL SEMAKAN BULANAN -->
+            <div class="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100" id="tableSection">
+                <div class="px-6 py-5 border-b border-gray-100 bg-slate-50">
+                    <h4 class="font-bold text-gray-900 flex items-center gap-2">
+                        <i class="fas fa-list-check text-emerald-600 bg-emerald-100 p-2 rounded-lg"></i> 
+                        Senarai Semak Kemudahan & Peralatan (<span id="tableMonthLabel" class="text-emerald-700">Bulan</span>)
+                    </h4>
+                </div>
+                <div class="overflow-x-auto custom-scrollbar">
+                    <table class="w-full text-left border-collapse min-w-[600px]">
+                        <thead>
+                            <tr class="bg-white text-gray-400 text-[11px] uppercase tracking-widest border-b border-gray-100">
+                                <th class="px-6 py-4 font-bold w-16 text-center">No.</th>
+                                <th class="px-6 py-4 font-bold">Perkara / Kemudahan</th>
+                                <th class="px-6 py-4 font-bold text-center w-32">Status Semakan</th>
+                                <th class="px-6 py-4 font-bold w-48">Keterangan</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-50 bg-white" id="checklistTableBody">
+                            <!-- Rows via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+<footer class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
+<div class="flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px] font-semibold text-slate-400">
+<span class="tracking-wide">DASHBOARD PELAPORAN MESRA IBADAH</span>
+<span class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Sistem pelaporan bersepadu</span>
+</div></footer>
+    <script>
+        // Masukkan URL Google Apps Script anda yang sebenar di sini
+        const API_URL = 'https://script.google.com/macros/s/AKfycbzvS9OSEgutpW62yuw0LusQCb4aWzykQR0E5C5tZ7l2kAZMnByGmomORta5j78UO1oz_g/exec';
+        
+        const MOCK_DATA = {
+            metadata: {
+                hospital: "HOSPITAL PULAU PINANG", tahun: "2026", wad: "C14", pegawai: "AMIROH BINTI KAMARDIN"
+            },
+            data: {}
+        };
+        
+        const facilitiesList = [
+            "Ruang solat", "Tempat wuduk", "Penanda arah kiblat", "Buku/Pamplet panduan Ibadah",
+            "Sejadah/telekung/kain pelikat", "kit solat", "Botol spray/debu tayammum",
+            "Pamlet/flyers/buku Ibadah", "Alquran/Yaasin", "Takwim solat"
+        ];
+        const monthsKey = ["Jan", "Feb", "Mac", "April", "Mei", "Jun", "Julai", "Ogos", "Sept", "Okt", "Nov", "Dis"];
+        
+        // Setup mock data fallback (in case API fails)
+        monthsKey.forEach((m, idx) => {
+            let hasData = idx <= 8; // Jan to Sept
+            MOCK_DATA.data[m] = {
+                percentage: hasData ? "100" : "",
+                items: facilitiesList.map(f => ({ name: f, status: hasData ? "√" : "" }))
+            };
+        });
+
+        let sheetData = {};
+        let metadata = {};
+        let doughnutChartInstance = null;
+        let usingMockData = false;
+        
+        window.onload = async function() {
+            await fetchAndProcessData();
+        };
+
+        async function fetchAndProcessData() {
+            try {
+                const response = await fetch(API_URL);
+                const result = await response.json();
+                
+                if (result.status === "success" && result.metadata) {
+                    sheetData = result.data;
+                    metadata = result.metadata;
+                    usingMockData = false;
+                } else {
+                    throw new Error("Format API tidak sah.");
+                }
+            } catch (error) {
+                console.warn("Menggunakan Mock Data kerana:", error);
+                sheetData = MOCK_DATA.data;
+                metadata = MOCK_DATA.metadata;
+                usingMockData = true;
+            }
+
+            const loader = document.getElementById('loadingOverlay');
+            loader.style.opacity = '0';
+            setTimeout(() => {
+                loader.classList.add('hidden');
+                document.getElementById('dashboardContent').classList.remove('hidden');
+                document.getElementById('dashboardContent').classList.add('fade-in');
+            }, 300);
+            
+            updateMetadataUI();
+            populateMonthTabs();
+            initCharts();
+            
+            // Auto-pilih bulan pertama yang ada data
+            let startMonth = "Jan"; 
+            for (let i = 0; i < monthsKey.length; i++) {
+                if(sheetData[monthsKey[i]] && sheetData[monthsKey[i]].percentage !== "") {
+                    startMonth = monthsKey[i];
+                    break;
+                }
+            }
+            updateDashboard(startMonth);
+        }
+
+        function updateMetadataUI() {
+            document.getElementById('navHospitalName').textContent = metadata.hospital || "HOSPITAL TIDAK DINYATAKAN";
+            document.getElementById('navTahun').textContent = metadata.tahun || "2026";
+            document.getElementById('metaWad').textContent = metadata.wad || "-";
+            document.getElementById('metaPegawai').textContent = metadata.pegawai || "TIADA REKOD";
+
+            const badge = document.getElementById('dataSourceBadge');
+            badge.classList.remove('hidden');
+            if (usingMockData) {
+                badge.classList.add('bg-amber-50', 'text-amber-700', 'border-amber-200');
+                badge.innerHTML = `<i class="fas fa-exclamation-circle"></i> Data Contoh (Sila semak Script)`;
+            } else {
+                badge.classList.add('bg-emerald-50', 'text-emerald-700', 'border-emerald-200');
+                badge.innerHTML = `<i class="fas fa-wifi"></i> Data Live (Google Sheets)`;
+            }
+        }
+
+        function populateMonthTabs() {
+            const container = document.getElementById('monthTabsContainer');
+            container.innerHTML = "";
+            
+            monthsKey.forEach(month => {
+                const perStr = sheetData[month] && sheetData[month].percentage ? sheetData[month].percentage.toString().trim() : "";
+                const hasData = perStr !== "";
+                
+                const btn = document.createElement('button');
+                btn.id = `tab-${month}`;
+                
+                if (hasData) {
+                    btn.className = `flex-shrink-0 px-5 py-2.5 rounded-xl font-bold text-sm transition-all duration-200 border-2 border-transparent bg-emerald-50 text-emerald-700 hover:bg-emerald-100 focus:outline-none`;
+                } else {
+                    btn.className = `flex-shrink-0 px-5 py-2.5 rounded-xl font-bold text-sm transition-all duration-200 border-2 border-transparent bg-gray-50 text-gray-400 opacity-60 hover:opacity-100 cursor-not-allowed focus:outline-none`;
+                    btn.title = "Tiada data untuk bulan ini";
+                }
+                
+                btn.textContent = month;
+                if (hasData) btn.onclick = () => updateDashboard(month);
+                
+                container.appendChild(btn);
+            });
+        }
+
+        function updateDashboard(selectedMonth) {
+            const monthData = sheetData[selectedMonth];
+            if (!monthData) return;
+
+            // Highlight Tab Aktif
+            monthsKey.forEach(m => {
+                const btn = document.getElementById(`tab-${m}`);
+                if (btn && sheetData[m] && sheetData[m].percentage !== "") {
+                    if (m === selectedMonth) {
+                        btn.classList.remove('border-transparent', 'bg-emerald-50', 'text-emerald-700');
+                        btn.classList.add('border-emerald-500', 'bg-emerald-500', 'text-white', 'shadow-md');
+                    } else {
+                        btn.classList.remove('border-emerald-500', 'bg-emerald-500', 'text-white', 'shadow-md');
+                        btn.classList.add('border-transparent', 'bg-emerald-50', 'text-emerald-700');
+                    }
+                }
+            });
+
+            // Animasi refresh komponen
+            const kpiSection = document.getElementById('kpiSection');
+            const tableSection = document.getElementById('tableSection');
+            
+            [kpiSection, tableSection].forEach(el => {
+                if(el) {
+                    el.classList.remove('data-refresh');
+                    void el.offsetWidth; // trigger reflow
+                    el.classList.add('data-refresh');
+                }
+            });
+
+            const fullMonthNames = {
+                "Jan": "JANUARI", "Feb": "FEBRUARI", "Mac": "MAC", "April": "APRIL", 
+                "Mei": "MEI", "Jun": "JUN", "Julai": "JULAI", "Ogos": "OGOS", 
+                "Sept": "SEPTEMBER", "Okt": "OKTOBER", "Nov": "NOVEMBER", "Dis": "DISEMBER"
+            };
+            
+            document.getElementById('bigMonthTitle').textContent = `BULAN: ${fullMonthNames[selectedMonth] || selectedMonth}`;
+            document.getElementById('tableMonthLabel').textContent = fullMonthNames[selectedMonth] || selectedMonth;
+
+            // Update KPI Peratusan
+            const rawPercentage = monthData.percentage ? monthData.percentage.toString().replace('%', '').trim() : "";
+            const isDataEmpty = rawPercentage === "";
+            let numPercentage = isDataEmpty ? 0 : parseFloat(rawPercentage) || 0;
+            
+            document.getElementById('kpiPercentage').textContent = isDataEmpty ? "N/A" : `${numPercentage}%`;
+            
+            let statusBadge = document.getElementById('kpiStatusBadge');
+            if (isDataEmpty) {
+                statusBadge.textContent = "Tiada Rekod";
+                statusBadge.className = "text-xs font-bold px-2 py-1 rounded-md bg-gray-100 text-gray-500 border border-gray-200";
+            } else if (numPercentage === 100) {
+                statusBadge.textContent = "Sempurna";
+                statusBadge.className = "text-xs font-bold px-2 py-1 rounded-md bg-emerald-100 text-emerald-700 border border-emerald-200";
+            } else {
+                statusBadge.textContent = "Perlu Perhatian";
+                statusBadge.className = "text-xs font-bold px-2 py-1 rounded-md bg-amber-100 text-amber-700 border border-amber-200";
+            }
+
+            // Update KPI Jumlah Lengkap
+            let validCheckmark = 0;
+            let totalItems = monthData.items.length || 10;
+            
+            monthData.items.forEach(item => {
+                const s = item.status.trim().toLowerCase();
+                if (s.includes('√') || s === 'v' || s === '/' || s === '1') validCheckmark++; 
+            });
+            
+            document.getElementById('kpiCompleted').textContent = validCheckmark;
+
+            // Tajuk carta palang dinamis
+            document.getElementById('pieChartTitle').textContent = `Prestasi Pencapaian Sehingga ${fullMonthNames[selectedMonth] || selectedMonth}`;
+
+            const tbody = document.getElementById('checklistTableBody');
+            tbody.innerHTML = "";
+            
+            monthData.items.forEach((item, index) => {
+                const s = item.status.trim().toLowerCase();
+                const isChecked = s.includes('√') || s === 'v' || s === '/' || s === '1';
+                const isEmptyItem = s === "";
+                
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 transition duration-150";
+                
+                let statusIcon, descBadge;
+                if (isChecked) {
+                    statusIcon = `<div class="mx-auto w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 shadow-sm border border-emerald-200"><i class="fas fa-check"></i></div>`;
+                    descBadge = `<span class="inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wide bg-emerald-50 text-emerald-700 border border-emerald-100"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5"></span> Ada / Lengkap</span>`;
+                } else if (isEmptyItem) {
+                    statusIcon = `<div class="mx-auto w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 border border-gray-200"><i class="fas fa-minus"></i></div>`;
+                    descBadge = `<span class="inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wide bg-gray-50 text-gray-500 border border-gray-200"><span class="w-1.5 h-1.5 rounded-full bg-gray-400 mr-1.5"></span> Tiada Rekod</span>`;
+                } else {
+                    statusIcon = `<div class="mx-auto w-8 h-8 rounded-full bg-red-50 flex items-center justify-center text-red-500 shadow-sm border border-red-200"><i class="fas fa-times"></i></div>`;
+                    descBadge = `<span class="inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wide bg-red-50 text-red-600 border border-red-100"><span class="w-1.5 h-1.5 rounded-full bg-red-500 mr-1.5"></span> Tiada / Rosak</span>`;
+                }
+
+                tr.innerHTML = `
+                    <td class="px-6 py-4 text-xs text-gray-400 font-bold text-center">${index + 1}</td>
+                    <td class="px-6 py-4 text-sm font-semibold text-gray-800">${item.name}</td>
+                    <td class="px-6 py-4">${statusIcon}</td>
+                    <td class="px-6 py-4">${descBadge}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            // Update Carta Palang Perbandingan Kumulatif
+            if (doughnutChartInstance) {
+                // Dapatkan index bulan yang dipilih
+                const selectedIdx = monthsKey.indexOf(selectedMonth);
+                
+                // Ambil senarai bulan dari Jan sehingga bulan yang dipilih sahaja
+                const chartLabels = monthsKey.slice(0, selectedIdx + 1);
+                
+                // Ambil data peratusan untuk setiap bulan tersebut
+                const chartData = chartLabels.map(m => {
+                    const mData = sheetData[m];
+                    if (!mData || mData.percentage === "") return 0;
+                    return parseFloat(mData.percentage.toString().replace('%', '')) || 0;
+                });
+
+                doughnutChartInstance.data.labels = chartLabels;
+                doughnutChartInstance.data.datasets[0].data = chartData;
+                
+                // Warnakan palang (Hijau terang untuk bulan dipilih, hijau pudar untuk bulan sebelumnya)
+                doughnutChartInstance.data.datasets[0].backgroundColor = chartLabels.map(m => 
+                    m === selectedMonth ? '#10B981' : '#D1FAE5'
+                );
+
+                doughnutChartInstance.update();
+            }
+        }
+
+        function initCharts() {
+            const ctxDoughnut = document.getElementById('doughnutChart').getContext('2d');
+            Chart.defaults.font.family = 'Inter';
+            
+            doughnutChartInstance = new Chart(ctxDoughnut, {
+                type: 'bar',
+                data: {
+                    labels: ['Jan'], 
+                    datasets: [{
+                        label: 'Pencapaian (%)',
+                        data: [0],
+                        backgroundColor: ['#10B981'],
+                        borderRadius: 6,
+                        borderWidth: 0,
+                        barPercentage: 0.7
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.parsed.y + '% Lengkap';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            ticks: {
+                                stepSize: 20,
+                                callback: function(value) { return value + '%'; }
+                            }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { font: { size: 12, weight: 'bold' } }
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
